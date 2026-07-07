@@ -128,7 +128,10 @@ class _DetailsScreenState extends State<DetailsScreen> {
                 ),
                 // Favourite
                 _buildIconButton(
-                  onTap: () => setState(() => _favService.toggle(widget.item)),
+                  onTap: () async {
+                    await _favService.toggle(widget.item);
+                    setState(() {});
+                  },
                   child: Icon(
                     isFav
                         ? Icons.favorite_rounded

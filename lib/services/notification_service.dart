@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.dart' as http;
+import 'api_service.dart';
+import 'auth_service.dart';
 
 class NotificationItem {
   final String id;
@@ -31,23 +33,14 @@ class NotificationService {
   int get unreadCount =>
       notificationsNotifier.value.where((n) => !n.isRead).length;
 
-  Future<void> saveToPrefs() async {
-    final prefs = await SharedPreferences.getInstance();
-    final jsonList = notificationsNotifier.value.map((n) => {
-      'id': n.id,
-      'title': n.title,
-      'body': n.body,
-      'timestamp': n.timestamp.millisecondsSinceEpoch,
-      'isRead': n.isRead,
-    }).toList();
-    await prefs.setString('notifications', jsonEncode(jsonList));
-  }
+  Future<void> fetchNotifications(String email) async {
+    try {
+      final response = await http.get(
+        Uri.parse('${ApiService.baseUrl}/notifications/$email'),
+      ).timeout(const Duration(seconds: 4));
 
-  void loadFromPrefs(SharedPreferences prefs) {
-    final notifsStr = prefs.getString('notifications');
-    if (notifsStr != null) {
-      try {
-        final decoded = jsonDecode(notifsStr) as List<dynamic>;
+      if (response.statusCode == 200) {
+        final decoded = jsonDecode(response.body) as List<dynamic>;
         final List<NotificationItem> list = [];
         for (var item in decoded) {
           final val = item as Map<String, dynamic>;
@@ -62,11 +55,11 @@ class NotificationService {
           );
         }
         notificationsNotifier.value = list;
-      } catch (_) {}
-    }
+      }
+    } catch (_) {}
   }
 
-  void addNotification({required String title, required String body}) {
+  Future<void> addNotification({required String title, required String body}) async {
     final newItem = NotificationItem(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       title: title,
@@ -74,19 +67,43 @@ class NotificationService {
       timestamp: DateTime.now(),
     );
     notificationsNotifier.value = [newItem, ...notificationsNotifier.value];
-    saveToPrefs();
+
+    try {
+      await http.post(
+        Uri.parse('${ApiService.baseUrl}/notifications'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'email': AuthService().email,
+          'title': title,
+          'body': body,
+        }),
+      ).timeout(const Duration(seconds: 4));
+    } catch (_) {}
   }
 
-  void markAllAsRead() {
+  Future<void> markAllAsRead() async {
     for (var n in notificationsNotifier.value) {
       n.isRead = true;
     }
     notificationsNotifier.value = List.from(notificationsNotifier.value);
-    saveToPrefs();
+
+    try {
+      await http.put(
+        Uri.parse('${ApiService.baseUrl}/notifications/read-all'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'email': AuthService().email,
+        }),
+      ).timeout(const Duration(seconds: 4));
+    } catch (_) {}
   }
 
-  void clearAll() {
+  Future<void> clearAll() async {
     notificationsNotifier.value = [];
-    saveToPrefs();
+    try {
+      await http.delete(
+        Uri.parse('${ApiService.baseUrl}/notifications/${AuthService().email}'),
+      ).timeout(const Duration(seconds: 4));
+    } catch (_) {}
   }
 }

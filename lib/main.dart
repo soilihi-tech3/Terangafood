@@ -184,6 +184,7 @@ class _MainContainerState extends State<MainContainer> {
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       floatingActionButton: FloatingActionButton(
+        heroTag: 'cart_fab',
         onPressed: () {
           Navigator.push(
             context,

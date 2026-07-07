@@ -1,0 +1,137 @@
+{
+  "users": {
+    "moussa.diop@gmail.com": {
+      "name": "Moussa Diop",
+      "email": "moussa.diop@gmail.com",
+      "phone": "+221 77 123 45 67",
+      "avatarUrl": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop",
+      "password": "password123"
+    },
+    "abd@gmail.com": {
+      "name": "Abd",
+      "email": "abd@gmail.com",
+      "phone": "+221 77 999 99 99",
+      "avatarUrl": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&auto=format&fit=crop",
+      "password": "Passer123"
+    }
+  },
+  "orders": {
+    "TF-211425": {
+      "id": "TF-211425",
+      "items": [
+        {
+          "id": "1",
+          "name": "Thiéboudienne Penda Mbaye",
+          "price": 3500,
+          "quantity": 1
+        },
+        {
+          "id": "4",
+          "name": "Double Teranga Burger",
+          "price": 4500,
+          "quantity": 1
+        }
+      ],
+      "address": "Route de la Pointe des Almadies, Dakar",
+      "deliveryMethod": "voiture",
+      "createdAt": 1783458226345,
+      "status": "livree",
+      "driverLocation": {
+        "lat": 14.7238,
+        "lng": -17.5112
+      },
+      "restaurantLocation": {
+        "lat": 14.6812,
+        "lng": -17.4435,
+        "name": "Teranga Food Central Kitchen"
+      },
+      "destinationLocation": {
+        "lat": 14.7238,
+        "lng": -17.5112
+      }
+    }
+  },
+  "orderHistory": {
+    "moussa.diop@gmail.com": [
+      {
+        "id": "TF-498172",
+        "itemsSummary": "Thiéboudienne Penda Mbaye × 1, Bissap Royal Glacé × 2",
+        "total": 5500,
+        "date": "28 Juin 2026",
+        "status": "livree",
+        "rating": 4.5,
+        "paymentMethod": "wave",
+        "deliveryMethod": "moto",
+        "departure": "Restaurant Le Teranga, Plateau",
+        "destination": "Route de la Pointe des Almadies, Dakar"
+      },
+      {
+        "id": "TF-124098",
+        "itemsSummary": "Double Teranga Burger × 2, Pizza Teranga Spéciale × 1",
+        "total": 14000,
+        "date": "15 Juin 2026",
+        "status": "livree",
+        "rating": 5,
+        "paymentMethod": "cash",
+        "deliveryMethod": "voiture",
+        "departure": "Restaurant Le Teranga, Plateau",
+        "destination": "Avenue Cheikh Anta Diop, Dakar"
+      }
+    ],
+    "abd@gmail.com": [
+      {
+        "id": "TF-211425",
+        "itemsSummary": "Thiéboudienne Penda Mbaye × 1, Double Teranga Burger × 1",
+        "total": 9500,
+        "date": "7 Juil 2026",
+        "status": "en_cours",
+        "paymentMethod": "cash",
+        "deliveryMethod": "voiture",
+        "departure": "Restaurant Le Teranga, Plateau",
+        "destination": "Route de la Pointe des Almadies, Dakar",
+        "rating": 2,
+        "review": null
+      }
+    ]
+  },
+  "notifications": {
+    "abd@gmail.com": [
+      {
+        "id": "1783458295966",
+        "title": "Commande Récupérée 🎉",
+        "body": "Merci d'avoir commandé chez TerangaFood. Bon appétit !",
+        "timestamp": 1783458295966,
+        "isRead": true
+      },
+      {
+        "id": "1783458288237",
+        "title": "Votre commande est arrivée ! 🔔",
+        "body": "Le livreur est devant votre porte avec la commande TF-211425.",
+        "timestamp": 1783458288237,
+        "isRead": true
+      },
+      {
+        "id": "1783458252249",
+        "title": "Commande en route ! 🛵",
+        "body": "Votre livreur a récupéré votre commande TF-211425 et se dirige vers vous.",
+        "timestamp": 1783458252249,
+        "isRead": true
+      },
+      {
+        "id": "1783458238245",
+        "title": "Préparation en cours 👨‍🍳",
+        "body": "Le chef prépare vos délicieux plats pour la commande TF-211425.",
+        "timestamp": 1783458238245,
+        "isRead": true
+      },
+      {
+        "id": "1783458228357",
+        "title": "Commande Confirmée 📦",
+        "body": "Votre commande TF-211425 a été validée par le restaurant.",
+        "timestamp": 1783458228357,
+        "isRead": true
+      }
+    ]
+  },
+  "favorites": {}
+}

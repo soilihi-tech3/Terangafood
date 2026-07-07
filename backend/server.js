@@ -1,11 +1,67 @@
 const express = require('express');
 const cors = require('cors');
+const fs = require('fs');
+const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
+
+const dbPath = path.join(__dirname, 'db.json');
+
+function loadDB() {
+  if (!fs.existsSync(dbPath)) {
+    fs.writeFileSync(dbPath, JSON.stringify({
+      users: {
+        "moussa.diop@gmail.com": {
+          name: "Moussa Diop",
+          email: "moussa.diop@gmail.com",
+          phone: "+221 77 123 45 67",
+          avatarUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop",
+          password: "password123"
+        }
+      },
+      orders: {},
+      orderHistory: {
+        "moussa.diop@gmail.com": [
+          {
+            id: "TF-498172",
+            itemsSummary: "Thiéboudienne Penda Mbaye × 1, Bissap Royal Glacé × 2",
+            total: 5500,
+            date: "28 Juin 2026",
+            status: "livree",
+            rating: 4.5,
+            paymentMethod: "wave",
+            deliveryMethod: "moto",
+            departure: "Restaurant Le Teranga, Plateau",
+            destination: "Route de la Pointe des Almadies, Dakar"
+          },
+          {
+            id: "TF-124098",
+            itemsSummary: "Double Teranga Burger × 2, Pizza Teranga Spéciale × 1",
+            total: 14000,
+            date: "15 Juin 2026",
+            status: "livree",
+            rating: 5.0,
+            paymentMethod: "cash",
+            deliveryMethod: "voiture",
+            departure: "Restaurant Le Teranga, Plateau",
+            destination: "Avenue Cheikh Anta Diop, Dakar"
+          }
+        ]
+      },
+      notifications: {},
+      favorites: {}
+    }, null, 2));
+  }
+  return JSON.parse(fs.readFileSync(dbPath, 'utf8'));
+}
+
+function saveDB(data) {
+  fs.writeFileSync(dbPath, JSON.stringify(data, null, 2));
+}
 
 // Senegal Geolocations (Regions -> Neighborhoods -> Streets)
 const locations = [
@@ -88,7 +144,7 @@ const menu = [
     description: "Le plat national emblématique du Sénégal. Riz cassé rouge cuit dans un bouillon de poisson savoureux, accompagné de poisson farci, manioc, carotte, chou et aubergine.",
     price: 3500,
     rating: 4.9,
-    imageUrl: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500&auto=format&fit=crop", // placeholder image but let's use good public URL
+    imageUrl: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500&auto=format&fit=crop",
     ingredients: ["Riz cassé", "Poisson Dorade", "Légumes", "Piment", "Guedj (poisson séché)", "Yet"]
   },
   {
@@ -163,9 +219,6 @@ const menu = [
   }
 ];
 
-// Active Orders DB Simulation
-const orders = {};
-
 // Helper to interpolate coordinates
 function interpolate(start, end, fraction) {
   return {
@@ -183,6 +236,163 @@ app.get('/api/menu', (req, res) => {
   res.json(menu);
 });
 
+// Authentication
+app.post('/api/auth/register', (req, res) => {
+  const { name, email, phone, password } = req.body;
+  const db = loadDB();
+  const key = email.toLowerCase().trim();
+  db.users[key] = {
+    name,
+    email,
+    phone,
+    avatarUrl: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&auto=format&fit=crop",
+    password
+  };
+  saveDB(db);
+  res.status(201).json(db.users[key]);
+});
+
+app.post('/api/auth/login', (req, res) => {
+  const { email, password } = req.body;
+  const db = loadDB();
+  const key = email.toLowerCase().trim();
+  if (db.users[key]) {
+    res.json(db.users[key]);
+  } else {
+    // Auto-create dynamically if not found
+    const generatedName = key.split('@')[0];
+    const capitalizedName = generatedName[0].toUpperCase() + generatedName.slice(1);
+    const newUser = {
+      name: capitalizedName,
+      email: key,
+      phone: "+221 77 999 99 99",
+      avatarUrl: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&auto=format&fit=crop",
+      password: password || "password123"
+    };
+    db.users[key] = newUser;
+    saveDB(db);
+    res.json(newUser);
+  }
+});
+
+app.put('/api/auth/update', (req, res) => {
+  const { name, email, phone, avatarUrl } = req.body;
+  const db = loadDB();
+  const key = email.toLowerCase().trim();
+  if (db.users[key]) {
+    db.users[key].name = name || db.users[key].name;
+    db.users[key].phone = phone || db.users[key].phone;
+    if (avatarUrl) db.users[key].avatarUrl = avatarUrl;
+    saveDB(db);
+    res.json(db.users[key]);
+  } else {
+    res.status(404).json({ error: "User not found" });
+  }
+});
+
+// Order History
+app.get('/api/history/:email', (req, res) => {
+  const email = req.params.email.toLowerCase().trim();
+  const db = loadDB();
+  res.json(db.orderHistory[email] || []);
+});
+
+app.post('/api/history', (req, res) => {
+  const { email, order } = req.body;
+  const key = email.toLowerCase().trim();
+  const db = loadDB();
+  if (!db.orderHistory[key]) db.orderHistory[key] = [];
+  db.orderHistory[key].unshift(order);
+  saveDB(db);
+  res.status(201).json(order);
+});
+
+app.put('/api/history/rate', (req, res) => {
+  const { email, id, rating, review } = req.body;
+  const key = email.toLowerCase().trim();
+  const db = loadDB();
+  const list = db.orderHistory[key] || [];
+  const idx = list.indexWhere ? list.indexWhere(o => o.id === id) : list.findIndex(o => o.id === id);
+  if (idx >= 0) {
+    list[idx].rating = rating;
+    list[idx].review = review;
+    saveDB(db);
+    res.json(list[idx]);
+  } else {
+    res.status(404).json({ error: "Order not found" });
+  }
+});
+
+// Notifications
+app.get('/api/notifications/:email', (req, res) => {
+  const email = req.params.email.toLowerCase().trim();
+  const db = loadDB();
+  res.json(db.notifications[email] || []);
+});
+
+app.post('/api/notifications', (req, res) => {
+  const { email, title, body } = req.body;
+  const key = email.toLowerCase().trim();
+  const db = loadDB();
+  if (!db.notifications[key]) db.notifications[key] = [];
+  const newItem = {
+    id: Date.now().toString(),
+    title,
+    body,
+    timestamp: Date.now(),
+    isRead: false
+  };
+  db.notifications[key].unshift(newItem);
+  saveDB(db);
+  res.status(201).json(newItem);
+});
+
+app.put('/api/notifications/read-all', (req, res) => {
+  const { email } = req.body;
+  const key = email.toLowerCase().trim();
+  const db = loadDB();
+  const list = db.notifications[key] || [];
+  for (const n of list) {
+    n.isRead = true;
+  }
+  saveDB(db);
+  res.json(list);
+});
+
+app.delete('/api/notifications/:email', (req, res) => {
+  const email = req.params.email.toLowerCase().trim();
+  const db = loadDB();
+  db.notifications[email] = [];
+  saveDB(db);
+  res.json({ success: true });
+});
+
+// Favorites
+app.get('/api/favorites/:email', (req, res) => {
+  const email = req.params.email.toLowerCase().trim();
+  const db = loadDB();
+  res.json(db.favorites[email] || []);
+});
+
+app.post('/api/favorites/toggle', (req, res) => {
+  const { email, item } = req.body;
+  const key = email.toLowerCase().trim();
+  const db = loadDB();
+  if (!db.favorites[key]) db.favorites[key] = [];
+  
+  const idx = db.favorites[key].findIndex(f => f.id === item.id);
+  let isFav = false;
+  if (idx >= 0) {
+    db.favorites[key].splice(idx, 1);
+  } else {
+    db.favorites[key].push(item);
+    isFav = true;
+  }
+  saveDB(db);
+  res.json({ isFavorite: isFav, list: db.favorites[key] });
+});
+
+// Orders
 app.post('/api/orders', (req, res) => {
   const { items, address, deliveryMethod } = req.body;
   if (!items || !address || !deliveryMethod) {
@@ -207,28 +417,31 @@ app.post('/api/orders', (req, res) => {
     id: orderId,
     items,
     address,
-    deliveryMethod, // "moto" or "voiture"
+    deliveryMethod,
     createdAt: Date.now(),
-    status: "confirmée", // "confirmée", "en_preparation", "en_chemin", "livree"
+    status: "confirmée",
     driverLocation: { ...restaurantLocation },
     restaurantLocation: { ...restaurantLocation },
     destinationLocation: destCoords
   };
 
-  orders[orderId] = newOrder;
+  const db = loadDB();
+  db.orders[orderId] = newOrder;
+  saveDB(db);
   res.status(201).json(newOrder);
 });
 
 app.get('/api/orders/:id', (req, res) => {
   const orderId = req.params.id;
-  const order = orders[orderId];
+  const db = loadDB();
+  const order = db.orders[orderId];
 
   if (!order) {
     return res.status(404).json({ error: "Order not found" });
   }
 
   // Update order simulation based on time elapsed
-  const elapsed = (Date.now() - order.createdAt) / 1000; // in seconds
+  const elapsed = (Date.now() - order.createdAt) / 1000;
 
   if (elapsed < 10) {
     order.status = "confirmée";
@@ -238,14 +451,15 @@ app.get('/api/orders/:id', (req, res) => {
     order.driverLocation = { ...order.restaurantLocation };
   } else if (elapsed < 60) {
     order.status = "en_chemin";
-    // Interpolate path between restaurant and destination
-    const fraction = (elapsed - 25) / 35; // 0.0 to 1.0
+    const fraction = (elapsed - 25) / 35;
     order.driverLocation = interpolate(order.restaurantLocation, order.destinationLocation, fraction);
   } else {
     order.status = "livree";
     order.driverLocation = { ...order.destinationLocation };
   }
 
+  db.orders[orderId] = order;
+  saveDB(db);
   res.json(order);
 });
 

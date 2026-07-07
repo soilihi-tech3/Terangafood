@@ -1,6 +1,8 @@
 import 'dart:convert';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.dart' as http;
 import '../models/food_model.dart';
+import 'api_service.dart';
+import 'auth_service.dart';
 
 /// Singleton service to track the user's favourite food items.
 class FavoritesService {
@@ -13,25 +15,14 @@ class FavoritesService {
 
   bool isFavorite(String id) => _favoriteIds.contains(id);
 
-  Future<void> saveToPrefs() async {
-    final prefs = await SharedPreferences.getInstance();
-    final jsonList = _favoriteItems.values.map((item) => {
-      'id': item.id,
-      'name': item.name,
-      'price': item.price,
-      'image': item.image,
-      'category': item.category,
-      'rating': item.rating,
-      'description': item.description,
-    }).toList();
-    await prefs.setString('favorites_json', jsonEncode(jsonList));
-  }
+  Future<void> fetchFavorites(String email) async {
+    try {
+      final response = await http.get(
+        Uri.parse('${ApiService.baseUrl}/favorites/$email'),
+      ).timeout(const Duration(seconds: 4));
 
-  void loadFromPrefs(SharedPreferences prefs) {
-    final favStr = prefs.getString('favorites_json');
-    if (favStr != null) {
-      try {
-        final decoded = jsonDecode(favStr) as List<dynamic>;
+      if (response.statusCode == 200) {
+        final decoded = jsonDecode(response.body) as List<dynamic>;
         _favoriteIds.clear();
         _favoriteItems.clear();
         for (var raw in decoded) {
@@ -40,20 +31,21 @@ class FavoritesService {
             id: item['id'] ?? '',
             name: item['name'] ?? '',
             price: (item['price'] as num).toDouble(),
-            image: item['image'] ?? '',
+            imageUrl: item['imageUrl'] ?? item['image'] ?? '',
             category: item['category'] ?? '',
             rating: (item['rating'] as num).toDouble(),
             description: item['description'] ?? '',
+            ingredients: List<String>.from(item['ingredients'] ?? []),
           );
           _favoriteIds.add(food.id);
           _favoriteItems[food.id] = food;
         }
-      } catch (_) {}
-    }
+      }
+    } catch (_) {}
   }
 
   /// Toggles favourite state. Returns true when item is now a favourite.
-  bool toggle(FoodItem item) {
+  Future<bool> toggle(FoodItem item) async {
     bool res;
     if (_favoriteIds.contains(item.id)) {
       _favoriteIds.remove(item.id);
@@ -64,7 +56,27 @@ class FavoritesService {
       _favoriteItems[item.id] = item;
       res = true;
     }
-    saveToPrefs();
+
+    try {
+      await http.post(
+        Uri.parse('${ApiService.baseUrl}/favorites/toggle'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'email': AuthService().email,
+          'item': {
+            'id': item.id,
+            'name': item.name,
+            'price': item.price,
+            'imageUrl': item.imageUrl,
+            'category': item.category,
+            'rating': item.rating,
+            'description': item.description,
+            'ingredients': item.ingredients,
+          }
+        }),
+      ).timeout(const Duration(seconds: 4));
+    } catch (_) {}
+
     return res;
   }
 

@@ -1,6 +1,8 @@
 import 'dart:convert';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.dart' as http;
 import '../models/food_model.dart';
+import 'api_service.dart';
+import 'auth_service.dart';
 
 /// Represents one entry in the local order history.
 class HistoryOrder {
@@ -31,77 +33,23 @@ class HistoryOrder {
   });
 }
 
-/// Singleton service managing order history (pre-seeded with mock data).
+/// Singleton service managing order history.
 class OrderHistoryService {
   static final OrderHistoryService _instance =
       OrderHistoryService._internal();
   factory OrderHistoryService() => _instance;
   OrderHistoryService._internal();
 
-  final List<HistoryOrder> _history = [
-    HistoryOrder(
-      id: "TF-498172",
-      itemsSummary:
-          "Thiéboudienne Penda Mbaye × 1, Bissap Royal Glacé × 2",
-      total: 5500,
-      date: "28 Juin 2026",
-      status: "livree",
-      rating: 4.5,
-      paymentMethod: "wave",
-      deliveryMethod: "moto",
-      departure: "Restaurant Le Teranga, Plateau",
-      destination: "Route de la Pointe des Almadies, Dakar",
-    ),
-    HistoryOrder(
-      id: "TF-124098",
-      itemsSummary:
-          "Double Teranga Burger × 2, Pizza Teranga Spéciale × 1",
-      total: 14000,
-      date: "15 Juin 2026",
-      status: "livree",
-      rating: 5.0,
-      paymentMethod: "cash",
-      deliveryMethod: "voiture",
-      departure: "Restaurant Le Teranga, Plateau",
-      destination: "Avenue Cheikh Anta Diop, Dakar",
-    ),
-    HistoryOrder(
-      id: "TF-039281",
-      itemsSummary: "Yassa au Poulet × 1, Thiakry Onctueux × 1",
-      total: 4500,
-      date: "10 Juin 2026",
-      status: "livree",
-      rating: 4.0,
-      paymentMethod: "omoney",
-      deliveryMethod: "retrait",
-      departure: "Restaurant Le Teranga, Plateau",
-      destination: "Retrait au Restaurant Central",
-    ),
-  ];
+  final List<HistoryOrder> _history = [];
 
-  Future<void> saveToPrefs() async {
-    final prefs = await SharedPreferences.getInstance();
-    final jsonList = _history.map((o) => {
-      'id': o.id,
-      'itemsSummary': o.itemsSummary,
-      'total': o.total,
-      'date': o.date,
-      'status': o.status,
-      'rating': o.rating,
-      'review': o.review,
-      'paymentMethod': o.paymentMethod,
-      'deliveryMethod': o.deliveryMethod,
-      'departure': o.departure,
-      'destination': o.destination,
-    }).toList();
-    await prefs.setString('order_history', jsonEncode(jsonList));
-  }
+  Future<void> fetchHistory(String email) async {
+    try {
+      final response = await http.get(
+        Uri.parse('${ApiService.baseUrl}/history/$email'),
+      ).timeout(const Duration(seconds: 4));
 
-  void loadFromPrefs(SharedPreferences prefs) {
-    final historyStr = prefs.getString('order_history');
-    if (historyStr != null) {
-      try {
-        final decoded = jsonDecode(historyStr) as List<dynamic>;
+      if (response.statusCode == 200) {
+        final decoded = jsonDecode(response.body) as List<dynamic>;
         _history.clear();
         for (var item in decoded) {
           final val = item as Map<String, dynamic>;
@@ -121,12 +69,12 @@ class OrderHistoryService {
             ),
           );
         }
-      } catch (_) {}
-    }
+      }
+    } catch (_) {}
   }
 
   /// Inserts a new order (just placed) at the top of the history.
-  void addOrder({
+  Future<void> addOrder({
     required String id,
     required Map<FoodItem, int> cart,
     required double total,
@@ -134,7 +82,7 @@ class OrderHistoryService {
     required String deliveryMethod,
     required String departure,
     required String destination,
-  }) {
+  }) async {
     final summary =
         cart.entries.map((e) => "${e.key.name} × ${e.value}").join(", ");
     final now = DateTime.now();
@@ -143,37 +91,65 @@ class OrderHistoryService {
       "Juil", "Août", "Sep", "Oct", "Nov", "Déc"
     ];
     final date = "${now.day} ${months[now.month - 1]} ${now.year}";
-    _history.insert(
-      0,
-      HistoryOrder(
-        id: id,
-        itemsSummary: summary,
-        total: total,
-        date: date,
-        status: "en_cours",
-        paymentMethod: paymentMethod,
-        deliveryMethod: deliveryMethod,
-        departure: departure,
-        destination: destination,
-      ),
+    final newOrder = HistoryOrder(
+      id: id,
+      itemsSummary: summary,
+      total: total,
+      date: date,
+      status: "en_cours",
+      paymentMethod: paymentMethod,
+      deliveryMethod: deliveryMethod,
+      departure: departure,
+      destination: destination,
     );
-    saveToPrefs();
+    _history.insert(0, newOrder);
+
+    try {
+      await http.post(
+        Uri.parse('${ApiService.baseUrl}/history'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'email': AuthService().email,
+          'order': {
+            'id': newOrder.id,
+            'itemsSummary': newOrder.itemsSummary,
+            'total': newOrder.total,
+            'date': newOrder.date,
+            'status': newOrder.status,
+            'paymentMethod': newOrder.paymentMethod,
+            'deliveryMethod': newOrder.deliveryMethod,
+            'departure': newOrder.departure,
+            'destination': newOrder.destination,
+          }
+        }),
+      ).timeout(const Duration(seconds: 4));
+    } catch (_) {}
   }
 
   void updateStatus(String id, String status) {
     final idx = _history.indexWhere((o) => o.id == id);
     if (idx >= 0) {
       _history[idx].status = status;
-      saveToPrefs();
     }
   }
 
-  void addRating(String id, double rating, String? review) {
+  Future<void> addRating(String id, double rating, String? review) async {
     final idx = _history.indexWhere((o) => o.id == id);
     if (idx >= 0) {
       _history[idx].rating = rating;
       _history[idx].review = review;
-      saveToPrefs();
+      try {
+        await http.put(
+          Uri.parse('${ApiService.baseUrl}/history/rate'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'email': AuthService().email,
+            'id': id,
+            'rating': rating,
+            'review': review,
+          }),
+        ).timeout(const Duration(seconds: 4));
+      } catch (_) {}
     }
   }
 

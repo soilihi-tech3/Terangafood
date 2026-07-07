@@ -8,6 +8,8 @@ import 'cart_screen.dart';
 import '../services/auth_service.dart';
 import '../services/category_service.dart';
 import '../services/notification_service.dart';
+import 'chatbot_screen.dart';
+import 'notifications_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final Map<FoodItem, int> cart;
@@ -43,7 +45,6 @@ class _HomeScreenState extends State<HomeScreen> {
   int _currentPromoPage = 0;
   Timer? _promoTimer;
 
-  List<LocationRegion> _regions = [];
   List<FoodItem> _menuItems = [];
   String _selectedCategory = "Tous";
 
@@ -124,11 +125,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _loadData() async {
     try {
-      final locs = await _apiService.getLocations();
+      await _apiService.getLocations();
       final menu = await _apiService.getMenu();
       if (mounted) {
         setState(() {
-          _regions = locs;
           _menuItems = menu;
           _isLoading = false;
         });
@@ -138,17 +138,6 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  List<String> _getAllStreets() {
-    final streets = <String>[];
-    for (final reg in _regions) {
-      for (final neigh in reg.neighborhoods) {
-        for (final street in neigh.streets) {
-          streets.add(street.name);
-        }
-      }
-    }
-    return streets.isEmpty ? ["Route de la Pointe des Almadies"] : streets;
-  }
 
   void _navigateToCart() {
     Navigator.push(
@@ -356,6 +345,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
       floatingActionButton: FloatingActionButton(
+        heroTag: 'chatbot_fab',
         onPressed: _showChatbotDialog,
         backgroundColor: const Color(0xFFE8612C),
         mini: true,
@@ -365,266 +355,9 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _showChatbotDialog() {
-    final List<Map<String, dynamic>> messages = [
-      {
-        'isBot': true,
-        'text': "Salam ! Je suis TerangaBot 🤖, votre assistant virtuel. Comment puis-je vous aider aujourd'hui ?",
-      }
-    ];
-    final inputCtrl = TextEditingController();
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) {
-        final isDark = Theme.of(context).brightness == Brightness.dark;
-        return StatefulBuilder(
-          builder: (context, setModalState) {
-            return AnimatedPadding(
-              padding: MediaQuery.of(context).viewInsets,
-              duration: const Duration(milliseconds: 100),
-              curve: Curves.decelerate,
-              child: Container(
-                height: MediaQuery.of(context).size.height * 0.65,
-                decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-                ),
-                child: Column(
-                  children: [
-                    const SizedBox(height: 12),
-                    Container(
-                      width: 40,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade400,
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: Row(
-                        children: [
-                          CircleAvatar(
-                            backgroundColor: const Color(0xFFE8612C).withOpacity(0.12),
-                            radius: 20,
-                            child: const Icon(Icons.smart_toy_rounded, color: Color(0xFFE8612C), size: 24),
-                          ),
-                          const SizedBox(width: 12),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                "TerangaBot 🤖",
-                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                              ),
-                              Row(
-                                children: [
-                                  Container(
-                                    width: 6,
-                                    height: 6,
-                                    decoration: const BoxDecoration(
-                                      color: Colors.green,
-                                      shape: BoxShape.circle,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    "En ligne · Réponses instantanées",
-                                    style: TextStyle(color: Colors.grey.shade500, fontSize: 11),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                          const Spacer(),
-                          IconButton(
-                            onPressed: () => Navigator.pop(context),
-                            icon: const Icon(Icons.close_rounded),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const Divider(),
-                    // Suggestions at the top
-                    Container(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      child: SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: Row(
-                          children: [
-                            _buildChatOption("📦 Où est ma commande ?", () {
-                              setModalState(() {
-                                messages.add({'isBot': false, 'text': "Où est ma commande ?"});
-                                messages.add({
-                                  'isBot': true,
-                                  'text': "Vous pouvez suivre vos commandes en cours en temps réel dans l'onglet 'Commandes' 📦. Si une livraison est en route, vous verrez même la position de votre livreur sur la carte !",
-                                });
-                              });
-                            }, isDark),
-                            const SizedBox(width: 8),
-                            _buildChatOption("💵 Modes de paiement", () {
-                              setModalState(() {
-                                messages.add({'isBot': false, 'text': "Modes de paiement"});
-                                messages.add({
-                                  'isBot': true,
-                                  'text': "Nous acceptons Wave 🟦, Orange Money 🟧, et le paiement en Espèces (Cash) 💵 à la livraison.",
-                                });
-                              });
-                            }, isDark),
-                            const SizedBox(width: 8),
-                            _buildChatOption("🛵 Comment marche la livraison ?", () {
-                              setModalState(() {
-                                messages.add({'isBot': false, 'text': "Comment marche la livraison ?"});
-                                messages.add({
-                                  'isBot': true,
-                                  'text': "Nous livrons par Moto 🛵 (800 F) ou par Voiture 🚗 (1500 F) partout à Dakar. Vous pouvez aussi choisir le retrait gratuit au restaurant 🏪.",
-                                });
-                              });
-                            }, isDark),
-                            const SizedBox(width: 8),
-                            _buildChatOption("📞 Contacter le support", () {
-                              setModalState(() {
-                                messages.add({'isBot': false, 'text': "Contacter le support"});
-                                messages.add({
-                                  'isBot': true,
-                                  'text': "Notre service client est disponible 24/7. Vous pouvez nous appeler directement au +221 77 261 38 81 ou nous écrire à support@teranga.sn 📞.",
-                                });
-                              });
-                            }, isDark),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const Divider(height: 1),
-                    Expanded(
-                      child: ListView.builder(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: messages.length,
-                        itemBuilder: (context, index) {
-                          final msg = messages[index];
-                          final isBot = msg['isBot'] as bool;
-                          return Align(
-                            alignment: isBot ? Alignment.centerLeft : Alignment.centerRight,
-                            child: Container(
-                              margin: const EdgeInsets.symmetric(vertical: 6),
-                              padding: const EdgeInsets.all(14),
-                              decoration: BoxDecoration(
-                                color: isBot
-                                    ? (isDark ? const Color(0xFF2A2A2A) : Colors.grey.shade100)
-                                    : const Color(0xFFE8612C),
-                                borderRadius: BorderRadius.only(
-                                  topLeft: const Radius.circular(16),
-                                  topRight: const Radius.circular(16),
-                                  bottomLeft: isBot ? Radius.zero : const Radius.circular(16),
-                                  bottomRight: isBot ? const Radius.circular(16) : Radius.zero,
-                                ),
-                              ),
-                              constraints: BoxConstraints(
-                                maxWidth: MediaQuery.of(context).size.width * 0.75,
-                              ),
-                              child: Text(
-                                msg['text'],
-                                style: TextStyle(
-                                  color: isBot
-                                      ? (isDark ? Colors.white : Colors.black87)
-                                      : Colors.white,
-                                  fontSize: 14,
-                                ),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                    const Divider(height: 1),
-                    // Message text input at the bottom
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-                      ),
-                      child: SafeArea(
-                        top: false,
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: TextField(
-                                controller: inputCtrl,
-                                decoration: InputDecoration(
-                                  hintText: "Écrivez votre message...",
-                                  hintStyle: TextStyle(color: Colors.grey.shade500, fontSize: 14),
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(24),
-                                    borderSide: BorderSide.none,
-                                  ),
-                                  fillColor: isDark ? const Color(0xFF2A2A2A) : Colors.grey.shade100,
-                                  filled: true,
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-                                ),
-                                style: TextStyle(color: isDark ? Colors.white : Colors.black87, fontSize: 14),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            CircleAvatar(
-                              backgroundColor: const Color(0xFFE8612C),
-                              radius: 20,
-                              child: IconButton(
-                                icon: const Icon(Icons.send_rounded, color: Colors.white, size: 18),
-                                onPressed: () {
-                                  final text = inputCtrl.text.trim();
-                                  if (text.isNotEmpty) {
-                                    setModalState(() {
-                                      messages.add({'isBot': false, 'text': text});
-                                      inputCtrl.clear();
-
-                                      // Respond based on message text
-                                      final query = text.toLowerCase();
-                                      String response = "Désolé, je n'ai pas bien compris votre demande. N'hésitez pas à utiliser nos questions rapides en haut ou contactez le support client.";
-
-                                      if (query.contains("commande") || query.contains("suiv") || query.contains("trouv")) {
-                                        response = "Vous pouvez suivre vos commandes en cours en temps réel dans l'onglet 'Commandes' 📦. Si une livraison est en route, vous verrez même la position de votre livreur sur la carte !";
-                                      } else if (query.contains("pay") || query.contains("argent") || query.contains("wave") || query.contains("orange") || query.contains("cash")) {
-                                        response = "Nous acceptons Wave 🟦, Orange Money 🟧, et le paiement en Espèces (Cash) 💵 à la livraison.";
-                                      } else if (query.contains("livr") || query.contains("moto") || query.contains("voiture") || query.contains("prix") || query.contains("tarif")) {
-                                        response = "Nous livrons par Moto 🛵 (800 F) ou par Voiture 🚗 (1500 F) partout à Dakar. Vous pouvez aussi choisir le retrait gratuit au restaurant 🏪.";
-                                      } else if (query.contains("support") || query.contains("aide") || query.contains("contact") || query.contains("téléphone") || query.contains("telephone") || query.contains("numero")) {
-                                        response = "Notre service client est disponible 24/7. Vous pouvez nous appeler directement au +221 77 261 38 81 ou nous écrire à support@teranga.sn 📞.";
-                                      }
-
-                                      messages.add({'isBot': true, 'text': response});
-                                    });
-                                  }
-                                },
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
-  Widget _buildChatOption(String label, VoidCallback onTap, bool isDark) {
-    return ActionChip(
-      onPressed: onTap,
-      label: Text(
-        label,
-        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFFE8612C)),
-      ),
-      backgroundColor: isDark ? const Color(0xFF2C2C2C) : const Color(0xFFFFF3E0),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const ChatbotScreen()),
     );
   }
 
@@ -632,8 +365,6 @@ class _HomeScreenState extends State<HomeScreen> {
   // HEADER
   // ─────────────────────────────────────────────────────────────
   Widget _buildHeader(bool isDark, int totalCartItems) {
-    final streets = _getAllStreets();
-
     return Row(
       children: [
         // Profile picture avatar on the left
@@ -884,110 +615,11 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _showNotificationsBottomSheet(BuildContext context, List<NotificationItem> notifs) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    NotificationService().markAllAsRead();
-
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: isDark ? const Color(0xFF1A1A1A) : Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => NotificationsScreen(onUpdateCart: widget.onUpdateCart),
       ),
-      builder: (ctx) {
-        return StatefulBuilder(
-          builder: (sheetCtx, setSheetState) {
-            final list = NotificationService().notifications;
-            return Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        "Notifications 🔔",
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: isDark ? Colors.white : Colors.black87,
-                        ),
-                      ),
-                      if (list.isNotEmpty)
-                        TextButton(
-                          onPressed: () {
-                            NotificationService().clearAll();
-                            setSheetState(() {});
-                          },
-                          child: const Text(
-                            "Tout effacer",
-                            style: TextStyle(color: Colors.red, fontSize: 13),
-                          ),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  if (list.isEmpty)
-                    Expanded(
-                      child: Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.notifications_off_rounded, size: 48, color: Colors.grey.shade400),
-                            const SizedBox(height: 10),
-                            Text(
-                              "Aucune notification pour le moment",
-                              style: TextStyle(color: Colors.grey.shade500),
-                            ),
-                          ],
-                        ),
-                      ),
-                    )
-                  else
-                    Expanded(
-                      child: ListView.builder(
-                        itemCount: list.length,
-                        itemBuilder: (c, idx) {
-                          final n = list[idx];
-                          return Container(
-                            margin: const EdgeInsets.only(bottom: 12),
-                            padding: const EdgeInsets.all(14),
-                            decoration: BoxDecoration(
-                              color: isDark ? const Color(0xFF2A2A2A) : Colors.grey.shade50,
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  n.title,
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14,
-                                    color: isDark ? Colors.white : Colors.black87,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  n.body,
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    color: isDark ? Colors.white70 : Colors.black54,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                ],
-              ),
-            );
-          }
-        );
-      },
     );
   }
 
@@ -1420,8 +1052,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   top: 8,
                   right: 8,
                   child: GestureDetector(
-                    onTap: () =>
-                        setState(() => _favService.toggle(item)),
+                    onTap: () async {
+                      await _favService.toggle(item);
+                      setState(() {});
+                    },
                     child: Container(
                       padding: const EdgeInsets.all(6),
                       decoration: BoxDecoration(
@@ -1552,8 +1186,10 @@ class _HomeScreenState extends State<HomeScreen> {
                     top: 8,
                     right: 8,
                     child: GestureDetector(
-                      onTap: () =>
-                          setState(() => _favService.toggle(item)),
+                      onTap: () async {
+                        await _favService.toggle(item);
+                        setState(() {});
+                      },
                       child: Container(
                         padding: const EdgeInsets.all(7),
                         decoration: BoxDecoration(

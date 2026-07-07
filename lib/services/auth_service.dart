@@ -1,5 +1,6 @@
 import 'dart:convert';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.dart' as http;
+import 'api_service.dart';
 
 class UserProfile {
   String name;
@@ -24,16 +25,7 @@ class AuthService {
     return _instance;
   }
 
-  AuthService._internal() {
-    // Seed default user
-    _users[email.toLowerCase().trim()] = UserProfile(
-      name: name,
-      email: email,
-      phone: phone,
-      avatarUrl: avatarUrl,
-      password: password,
-    );
-  }
+  AuthService._internal();
 
   String name = "Moussa Diop";
   String email = "moussa.diop@gmail.com";
@@ -41,117 +33,89 @@ class AuthService {
   String avatarUrl = "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop";
   String password = "password123";
 
-  final Map<String, UserProfile> _users = {};
-
-  Future<void> saveToPrefs() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('auth_name', name);
-    await prefs.setString('auth_email', email);
-    await prefs.setString('auth_phone', phone);
-    await prefs.setString('auth_avatarUrl', avatarUrl);
-    await prefs.setString('auth_password', password);
-
-    final usersJson = _users.map((k, v) => MapEntry(k, {
-      'name': v.name,
-      'email': v.email,
-      'phone': v.phone,
-      'avatarUrl': v.avatarUrl,
-      'password': v.password,
-    }));
-    await prefs.setString('auth_users', jsonEncode(usersJson));
-  }
-
-  void loadFromPrefs(SharedPreferences prefs) {
-    name = prefs.getString('auth_name') ?? name;
-    email = prefs.getString('auth_email') ?? email;
-    phone = prefs.getString('auth_phone') ?? phone;
-    avatarUrl = prefs.getString('auth_avatarUrl') ?? avatarUrl;
-    password = prefs.getString('auth_password') ?? password;
-
-    final usersStr = prefs.getString('auth_users');
-    if (usersStr != null) {
-      try {
-        final decoded = jsonDecode(usersStr) as Map<String, dynamic>;
-        decoded.forEach((k, v) {
-          final val = v as Map<String, dynamic>;
-          _users[k] = UserProfile(
-            name: val['name'] ?? '',
-            email: val['email'] ?? '',
-            phone: val['phone'] ?? '',
-            avatarUrl: val['avatarUrl'] ?? '',
-            password: val['password'] ?? '',
-          );
-        });
-      } catch (_) {}
-    }
-  }
-
-  void registerUser({
+  Future<void> registerUser({
     required String name,
     required String email,
     required String phone,
     required String password,
-  }) {
-    final newUser = UserProfile(
-      name: name,
-      email: email,
-      phone: phone,
-      avatarUrl: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&auto=format&fit=crop",
-      password: password,
-    );
-    _users[email.toLowerCase().trim()] = newUser;
-    saveToPrefs();
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('${ApiService.baseUrl}/auth/register'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'name': name,
+          'email': email,
+          'phone': phone,
+          'password': password,
+        }),
+      ).timeout(const Duration(seconds: 4));
+
+      if (response.statusCode == 201) {
+        final data = jsonDecode(response.body);
+        this.name = data['name'] ?? name;
+        this.email = data['email'] ?? email;
+        this.phone = data['phone'] ?? phone;
+        this.avatarUrl = data['avatarUrl'] ?? this.avatarUrl;
+        this.password = data['password'] ?? password;
+      }
+    } catch (_) {
+      this.name = name;
+      this.email = email;
+      this.phone = phone;
+      this.password = password;
+    }
   }
 
-  bool loginUser(String email, String password) {
-    final cleanedEmail = email.toLowerCase().trim();
-    if (_users.containsKey(cleanedEmail)) {
-      final user = _users[cleanedEmail]!;
-      this.name = user.name;
-      this.email = user.email;
-      this.phone = user.phone;
-      this.avatarUrl = user.avatarUrl;
-      this.password = user.password;
-      saveToPrefs();
-      return true;
-    }
-    // If not registered, create user dynamically so they can login directly
-    final generatedName = cleanedEmail.split('@').first;
-    final capitalizedName = generatedName[0].toUpperCase() + generatedName.substring(1);
-    final newUser = UserProfile(
-      name: capitalizedName,
-      email: cleanedEmail,
-      phone: "+221 77 999 99 99",
-      avatarUrl: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&auto=format&fit=crop",
-      password: password,
-    );
-    _users[cleanedEmail] = newUser;
-    this.name = newUser.name;
-    this.email = newUser.email;
-    this.phone = newUser.phone;
-    this.avatarUrl = newUser.avatarUrl;
-    this.password = newUser.password;
-    saveToPrefs();
+  Future<bool> loginUser(String email, String password) async {
+    try {
+      final response = await http.post(
+        Uri.parse('${ApiService.baseUrl}/auth/login'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'email': email,
+          'password': password,
+        }),
+      ).timeout(const Duration(seconds: 4));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        this.name = data['name'] ?? this.name;
+        this.email = data['email'] ?? email;
+        this.phone = data['phone'] ?? this.phone;
+        this.avatarUrl = data['avatarUrl'] ?? this.avatarUrl;
+        this.password = data['password'] ?? password;
+        return true;
+      }
+    } catch (_) {}
+
+    final generatedName = email.toLowerCase().trim().split('@').first;
+    this.name = generatedName[0].toUpperCase() + generatedName.substring(1);
+    this.email = email;
+    this.phone = "+221 77 999 99 99";
+    this.password = password;
     return true;
   }
 
-  void updateUser({required String name, required String email, required String phone, String? avatarUrl}) {
+  Future<void> updateUser({required String name, required String email, required String phone, String? avatarUrl}) async {
     this.name = name;
     this.email = email;
     this.phone = phone;
     if (avatarUrl != null) {
       this.avatarUrl = avatarUrl;
     }
-    // Sync inside map
-    final cleaned = email.toLowerCase().trim();
-    if (_users.containsKey(cleaned)) {
-      _users[cleaned]!.name = name;
-      _users[cleaned]!.phone = phone;
-      if (avatarUrl != null) {
-        _users[cleaned]!.avatarUrl = avatarUrl;
-      }
-    }
-    saveToPrefs();
+    try {
+      await http.put(
+        Uri.parse('${ApiService.baseUrl}/auth/update'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'name': name,
+          'email': email,
+          'phone': phone,
+          'avatarUrl': avatarUrl,
+        }),
+      ).timeout(const Duration(seconds: 4));
+    } catch (_) {}
   }
 
   void logout() {
@@ -159,6 +123,5 @@ class AuthService {
     email = "moussa.diop@gmail.com";
     phone = "+221 77 123 45 67";
     avatarUrl = "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop";
-    saveToPrefs();
   }
 }

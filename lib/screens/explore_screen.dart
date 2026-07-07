@@ -682,7 +682,10 @@ class _ExploreScreenState extends State<ExploreScreen> {
                     top: 8,
                     right: 8,
                     child: GestureDetector(
-                      onTap: () => setState(() => _favService.toggle(item)),
+                      onTap: () async {
+                        await _favService.toggle(item);
+                        setState(() {});
+                      },
                       child: Container(
                         padding: const EdgeInsets.all(7),
                         decoration: BoxDecoration(
