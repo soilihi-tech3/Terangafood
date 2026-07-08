@@ -1,9 +1,9 @@
 import 'dart:async';
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../services/chatbot_service.dart';
 import '../services/chat_history_service.dart';
+import '../utils/image_helper.dart';
 
 class ChatbotScreen extends StatefulWidget {
   const ChatbotScreen({super.key});
@@ -201,77 +201,196 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
   }
 
   void _triggerVoiceRecording() {
-    // Pulse wave simulation dialog
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (ctx) {
         final isDark = Theme.of(context).brightness == Brightness.dark;
-        return AlertDialog(
-          backgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const SizedBox(height: 12),
-              CircleAvatar(
-                radius: 36,
-                backgroundColor: const Color(0xFFE8612C).withOpacity(0.12),
-                child: const Icon(Icons.mic_rounded, color: Color(0xFFE8612C), size: 36),
-              ),
-              const SizedBox(height: 20),
-              const Text(
-                "Enregistrement vocal...",
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                "Dites ce que vous souhaitez commander ou demandez de l'aide.",
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
-              ),
-              const SizedBox(height: 24),
-              // Pulse/wave indicator row
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(5, (index) {
-                  return Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 3),
-                    width: 4,
-                    height: 15.0 + (index % 2 == 0 ? 10 : 0),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFE8612C),
-                      borderRadius: BorderRadius.circular(2),
+        const primaryColor = Color(0xFFE8612C);
+
+        int elapsedSeconds = 0;
+        List<double> waveHeights = List.generate(16, (i) => 10.0 + (i % 4) * 8);
+        Timer? secondTimer;
+        Timer? waveTimer;
+
+        return StatefulBuilder(
+          builder: (dialogCtx, setDialogState) {
+            // Initialize timers on first render
+            if (secondTimer == null) {
+              secondTimer = Timer.periodic(const Duration(seconds: 1), (t) {
+                setDialogState(() {
+                  elapsedSeconds++;
+                  if (elapsedSeconds >= 120) {
+                    // Auto-stop at 2 minutes
+                    t.cancel();
+                    waveTimer?.cancel();
+                    Navigator.pop(dialogCtx);
+                    _sendUserMessage("Je voudrais commander un bon Thiéboudienne Penda Mbaye.");
+                  }
+                });
+              });
+
+              waveTimer = Timer.periodic(const Duration(milliseconds: 120), (t) {
+                setDialogState(() {
+                  // Generate random wave amplitudes
+                  final now = DateTime.now().millisecondsSinceEpoch;
+                  for (int i = 0; i < waveHeights.length; i++) {
+                    waveHeights[i] = 10.0 + ((now + i * 200) % 35).toDouble();
+                  }
+                });
+              });
+            }
+
+            final minutesStr = (elapsedSeconds ~/ 60).toString().padLeft(2, '0');
+            final secondsStr = (elapsedSeconds % 60).toString().padLeft(2, '0');
+
+            return WillPopScope(
+              onWillPop: () async {
+                secondTimer?.cancel();
+                waveTimer?.cancel();
+                return true;
+              },
+              child: AlertDialog(
+                backgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const SizedBox(height: 16),
+                    // Pulsing animated mic button
+                    Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        // Outer glowing rings
+                        Container(
+                          width: 100,
+                          height: 100,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: primaryColor.withOpacity(0.08),
+                          ),
+                        ),
+                        Container(
+                          width: 80,
+                          height: 80,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: primaryColor.withOpacity(0.15),
+                          ),
+                        ),
+                        Container(
+                          width: 60,
+                          height: 60,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: primaryColor,
+                            boxShadow: [
+                              BoxShadow(
+                                color: primaryColor.withOpacity(0.4),
+                                blurRadius: 12,
+                                spreadRadius: 2,
+                              ),
+                            ],
+                          ),
+                          child: const Icon(Icons.mic_rounded, color: Colors.white, size: 28),
+                        ),
+                      ],
                     ),
-                  );
-                }),
-              ),
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(ctx); // Close recording dialog
+                    const SizedBox(height: 24),
+                    const Text(
+                      "Enregistrement vocal...",
+                      style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      "TerangaBot écoute votre voix...",
+                      style: TextStyle(color: Colors.grey.shade500, fontSize: 13),
+                    ),
+                    const SizedBox(height: 20),
+                    // Realtime Timer
+                    Text(
+                      "$minutesStr:$secondsStr",
+                      style: const TextStyle(
+                        fontFamily: 'Courier',
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFFE8612C),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    // Active soundwaves row
+                    SizedBox(
+                      height: 50,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: List.generate(waveHeights.length, (index) {
+                          final h = waveHeights[index];
+                          return Container(
+                            margin: const EdgeInsets.symmetric(horizontal: 2.5),
+                            width: 3.5,
+                            height: h,
+                            decoration: BoxDecoration(
+                              color: primaryColor.withOpacity(0.85),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                          );
+                        }),
+                      ),
+                    ),
+                    const SizedBox(height: 28),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () {
+                              secondTimer?.cancel();
+                              waveTimer?.cancel();
+                              Navigator.pop(dialogCtx);
+                            },
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: Colors.grey,
+                              side: BorderSide(color: Colors.grey.shade300),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                            child: const Text("Annuler", style: TextStyle(fontWeight: FontWeight.bold)),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () {
+                              secondTimer?.cancel();
+                              waveTimer?.cancel();
+                              Navigator.pop(dialogCtx);
 
-                  // Transcribe a random food query to simulate Speech to Text
-                  final voiceQueries = [
-                    "Je voudrais commander une Thiéboudienne Penda Mbaye s'il vous plaît.",
-                    "Est-ce que vous livrez aux Almadies actuellement ?",
-                    "Est-ce que je peux payer par Wave à la livraison ?",
-                    "Quels sont vos desserts traditionnels du Sénégal ?",
-                  ];
-                  final randomQuery = (voiceQueries..shuffle()).first;
-
-                  _sendUserMessage(randomQuery);
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFE8612C),
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+                              final voiceQueries = [
+                                "Je voudrais commander une Thiéboudienne Penda Mbaye s'il vous plaît.",
+                                "Est-ce que vous livrez aux Almadies actuellement ?",
+                                "Est-ce que je peux payer par Wave à la livraison ?",
+                                "Quels sont vos desserts traditionnels du Sénégal ?",
+                              ];
+                              final randomQuery = (voiceQueries..shuffle()).first;
+                              _sendUserMessage(randomQuery);
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: primaryColor,
+                              foregroundColor: Colors.white,
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                            child: const Text("Envoyer", style: TextStyle(fontWeight: FontWeight.bold)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-                child: const Text("Terminer", style: TextStyle(fontWeight: FontWeight.bold)),
               ),
-            ],
-          ),
+            );
+          },
         );
       },
     );
@@ -557,8 +676,8 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
                           if (imagePath != null) ...[
                             ClipRRect(
                               borderRadius: BorderRadius.circular(10),
-                              child: Image.file(
-                                File(imagePath),
+                              child: buildCustomImage(
+                                imagePath,
                                 width: 180,
                                 height: 180,
                                 fit: BoxFit.cover,

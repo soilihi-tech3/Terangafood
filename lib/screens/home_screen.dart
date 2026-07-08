@@ -10,6 +10,7 @@ import '../services/category_service.dart';
 import '../services/notification_service.dart';
 import 'chatbot_screen.dart';
 import 'notifications_screen.dart';
+import '../utils/image_helper.dart';
 
 class HomeScreen extends StatefulWidget {
   final Map<FoodItem, int> cart;
@@ -383,7 +384,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             child: CircleAvatar(
               radius: 20,
-              backgroundImage: NetworkImage(_authService.avatarUrl),
+              backgroundImage: getImageProvider(_authService.avatarUrl),
             ),
           ),
         ),

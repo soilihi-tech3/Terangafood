@@ -5,6 +5,8 @@ import '../services/api_service.dart';
 import '../services/category_service.dart';
 import '../models/food_model.dart';
 import 'auth_screens.dart';
+import 'package:image_picker/image_picker.dart';
+import '../utils/image_helper.dart';
 import 'favorites_screen.dart';
 import '../services/order_history_service.dart';
 
@@ -108,6 +110,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
               const SizedBox(height: 16),
               const Divider(),
               const SizedBox(height: 12),
+              ElevatedButton.icon(
+                onPressed: () async {
+                  final XFile? file = await ImagePicker().pickImage(source: ImageSource.gallery);
+                  if (file != null) {
+                    if (!context.mounted) return;
+                    setState(() => _authService.avatarUrl = file.path);
+                    Navigator.pop(ctx);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: const Text("Photo de profil mise à jour !"),
+                        backgroundColor: const Color(0xFFE8612C),
+                        behavior: SnackBarBehavior.floating,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                      ),
+                    );
+                  }
+                },
+                icon: const Icon(Icons.photo_library_rounded),
+                label: const Text("Choisir une photo depuis l'ordinateur"),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFE8612C),
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size(double.infinity, 44),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+              const SizedBox(height: 16),
               Text(
                 "Ou coller le lien d'une photo (URL)",
                 style: TextStyle(
@@ -605,7 +635,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             child: CircleAvatar(
                               radius: 52,
                               backgroundImage:
-                                  NetworkImage(_authService.avatarUrl),
+                                  getImageProvider(_authService.avatarUrl),
                             ),
                           ),
                           Positioned(
@@ -1292,16 +1322,52 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 ],
                               ),
                               const SizedBox(height: 12),
-                              TextField(
-                                controller: imgUrl1Ctrl,
-                                style: TextStyle(color: isDark ? Colors.white : Colors.black),
-                                decoration: const InputDecoration(labelText: "URL Photo Principale"),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: TextField(
+                                      controller: imgUrl1Ctrl,
+                                      style: TextStyle(color: isDark ? Colors.white : Colors.black),
+                                      decoration: const InputDecoration(labelText: "URL Photo Principale"),
+                                    ),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.add_photo_alternate_rounded, color: Color(0xFFE8612C)),
+                                    onPressed: () async {
+                                      final XFile? file = await ImagePicker().pickImage(source: ImageSource.gallery);
+                                      if (file != null) {
+                                        setModalState(() {
+                                          imgUrl1Ctrl.text = file.path;
+                                        });
+                                      }
+                                    },
+                                    tooltip: "Choisir depuis l'ordinateur",
+                                  ),
+                                ],
                               ),
                               const SizedBox(height: 12),
-                              TextField(
-                                controller: imgUrl2Ctrl,
-                                style: TextStyle(color: isDark ? Colors.white : Colors.black),
-                                decoration: const InputDecoration(labelText: "URL Photo Galerie (Secondaire)"),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: TextField(
+                                      controller: imgUrl2Ctrl,
+                                      style: TextStyle(color: isDark ? Colors.white : Colors.black),
+                                      decoration: const InputDecoration(labelText: "URL Photo Galerie (Secondaire)"),
+                                    ),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.add_photo_alternate_rounded, color: Color(0xFFE8612C)),
+                                    onPressed: () async {
+                                      final XFile? file = await ImagePicker().pickImage(source: ImageSource.gallery);
+                                      if (file != null) {
+                                        setModalState(() {
+                                          imgUrl2Ctrl.text = file.path;
+                                        });
+                                      }
+                                    },
+                                    tooltip: "Choisir depuis l'ordinateur",
+                                  ),
+                                ],
                               ),
                               const SizedBox(height: 12),
                               TextField(
@@ -1589,17 +1655,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           return ListTile(
                             leading: ClipRRect(
                               borderRadius: BorderRadius.circular(8),
-                              child: Image.network(
+                              child: buildCustomImage(
                                 item.imageUrl,
                                 width: 44,
                                 height: 44,
                                 fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) => Container(
-                                  width: 44,
-                                  height: 44,
-                                  color: Colors.grey.shade200,
-                                  child: const Icon(Icons.fastfood_rounded, size: 18),
-                                ),
                               ),
                             ),
                             title: Text(
@@ -1741,10 +1801,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 decoration: const InputDecoration(labelText: "Prix (FCFA)"),
               ),
               const SizedBox(height: 12),
-              TextField(
-                controller: imgUrl1Ctrl,
-                style: TextStyle(color: isDark ? Colors.white : Colors.black),
-                decoration: const InputDecoration(labelText: "URL Photo"),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: imgUrl1Ctrl,
+                      style: TextStyle(color: isDark ? Colors.white : Colors.black),
+                      decoration: const InputDecoration(labelText: "URL Photo"),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.add_photo_alternate_rounded, color: Color(0xFFE8612C)),
+                    onPressed: () async {
+                      final XFile? file = await ImagePicker().pickImage(source: ImageSource.gallery);
+                      if (file != null) {
+                        imgUrl1Ctrl.text = file.path;
+                      }
+                    },
+                    tooltip: "Choisir depuis l'ordinateur",
+                  ),
+                ],
               ),
               const SizedBox(height: 12),
               TextField(

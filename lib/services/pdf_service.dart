@@ -11,12 +11,12 @@ class PdfService {
     final subtotal = order.total - deliveryFee;
 
     final payMethodStr = order.paymentMethod == "wave"
-        ? "Wave 🟦"
-        : (order.paymentMethod == "omoney" ? "Orange Money 🟧" : "Espèces (Cash) 💵");
+        ? "Wave "
+        : (order.paymentMethod == "omoney" ? "Orange Money " : "Espèces (Cash) ");
 
     final methodStr = order.deliveryMethod == "moto"
-        ? "Livreur à Moto 🛵"
-        : (order.deliveryMethod == "voiture" ? "Livreur en Voiture 🚗" : "Retrait au Restaurant 🏪");
+        ? "Livreur à Moto "
+        : (order.deliveryMethod == "voiture" ? "Livreur en Voiture " : "Retrait au Restaurant ");
 
     pdf.addPage(
       pw.Page(

@@ -49,6 +49,52 @@
         "lat": 14.7238,
         "lng": -17.5112
       }
+    },
+    "TF-594783": {
+      "id": "TF-594783",
+      "items": [
+        {
+          "id": "5",
+          "name": "Pizza Teranga Spéciale",
+          "price": 5000,
+          "quantity": 1
+        },
+        {
+          "id": "2",
+          "name": "Yassa au Poulet",
+          "price": 3000,
+          "quantity": 1
+        },
+        {
+          "id": "8",
+          "name": "Jus de Bouye (Pain de Singe)",
+          "price": 1200,
+          "quantity": 1
+        },
+        {
+          "id": "6",
+          "name": "Thiakry Onctueux",
+          "price": 1500,
+          "quantity": 1
+        }
+      ],
+      "address": "Route de la Pointe des Almadies, Dakar",
+      "deliveryMethod": "voiture",
+      "createdAt": 1783461657499,
+      "status": "livree",
+      "driverLocation": {
+        "lat": 14.7238,
+        "lng": -17.5112
+      },
+      "restaurantLocation": {
+        "lat": 14.6812,
+        "lng": -17.4435,
+        "name": "Teranga Food Central Kitchen"
+      },
+      "destinationLocation": {
+        "lat": 14.7238,
+        "lng": -17.5112
+      }
     }
   },
   "orderHistory": {
@@ -80,6 +126,19 @@
     ],
     "abd@gmail.com": [
       {
+        "id": "TF-594783",
+        "itemsSummary": "Pizza Teranga Spéciale × 1, Yassa au Poulet × 1, Jus de Bouye (Pain de Singe) × 1, Thiakry Onctueux × 1",
+        "total": 12200,
+        "date": "7 Juil 2026",
+        "status": "en_cours",
+        "paymentMethod": "wave",
+        "deliveryMethod": "voiture",
+        "departure": "Restaurant Le Teranga, Plateau",
+        "destination": "Route de la Pointe des Almadies, Dakar",
+        "rating": 4,
+        "review": null
+      },
+      {
         "id": "TF-211425",
         "itemsSummary": "Thiéboudienne Penda Mbaye × 1, Double Teranga Burger × 1",
         "total": 9500,
@@ -96,6 +155,41 @@
   },
   "notifications": {
     "abd@gmail.com": [
+      {
+        "id": "1783461729562",
+        "title": "Commande Récupérée 🎉",
+        "body": "Merci d'avoir commandé chez TerangaFood. Bon appétit !",
+        "timestamp": 1783461729562,
+        "isRead": false
+      },
+      {
+        "id": "1783461719280",
+        "title": "Votre commande est arrivée ! 🔔",
+        "body": "Le livreur est devant votre porte avec la commande TF-594783.",
+        "timestamp": 1783461719280,
+        "isRead": false
+      },
+      {
+        "id": "1783461683311",
+        "title": "Commande en route ! 🛵",
+        "body": "Votre livreur a récupéré votre commande TF-594783 et se dirige vers vous.",
+        "timestamp": 1783461683311,
+        "isRead": false
+      },
+      {
+        "id": "1783461669311",
+        "title": "Préparation en cours 👨‍🍳",
+        "body": "Le chef prépare vos délicieux plats pour la commande TF-594783.",
+        "timestamp": 1783461669311,
+        "isRead": false
+      },
+      {
+        "id": "1783461659313",
+        "title": "Commande Confirmée 📦",
+        "body": "Votre commande TF-594783 a été validée par le restaurant.",
+        "timestamp": 1783461659313,
+        "isRead": false
+      },
       {
         "id": "1783458295966",
         "title": "Commande Récupérée 🎉",
@@ -133,5 +227,42 @@
       }
     ]
   },
-  "favorites": {}
+  "favorites": {
+    "abd@gmail.com": [
+      {
+        "id": "1",
+        "name": "Thiéboudienne Penda Mbaye",
+        "price": 3500,
+        "imageUrl": "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500&auto=format&fit=crop",
+        "category": "Plats Sénégalais",
+        "rating": 4.9,
+        "description": "Le plat national emblématique du Sénégal. Riz cassé rouge cuit dans un bouillon de poisson savoureux, accompagné de poisson farci, manioc, carotte, chou et aubergine.",
+        "ingredients": [
+          "Riz cassé",
+          "Poisson Dorade",
+          "Légumes",
+          "Piment",
+          "Guedj (poisson séché)",
+          "Yet"
+        ]
+      },
+      {
+        "id": "2",
+        "name": "Yassa au Poulet",
+        "price": 3000,
+        "imageUrl": "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=500&auto=format&fit=crop",
+        "category": "Plats Sénégalais",
+        "rating": 4.8,
+        "description": "Poulet mariné au citron, à la moutarde et à l'ail, braisé puis mijoté dans une généreuse sauce aux oignons caramélisés. Servi avec du riz blanc parfumé.",
+        "ingredients": [
+          "Poulet fermier",
+          "Oignons",
+          "Citron vert",
+          "Moutarde",
+          "Olives",
+          "Riz parfumé"
+        ]
+      }
+    ]
+  }
 }
